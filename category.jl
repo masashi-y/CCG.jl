@@ -1,11 +1,28 @@
 
+module Cat
+
+export Category,
+       Atomic,
+       Functor,
+       S,
+       N,
+       NP,
+       PP,
+       Fwd,
+       Bwd,
+       Punct,
+       (/),
+       (|),
+       isatom,
+       parse
+
 using Match
 
 abstract type Category end
 
 abstract type Atomic <: Category end
 
-abstract type Functor{X <: Category, Y <: Category} <: Category end
+abstract type Functor <: Category end
 
 struct S <: Atomic
     feature :: String
@@ -23,14 +40,14 @@ struct PP <: Atomic
     feature :: String
 end
 
-struct Fwd{X <: Category, Y <: Category} <: Functor{X, Y}
-    left  :: X
-    right :: Y
+struct Fwd <: Functor
+    left  :: Category
+    right :: Category
 end
 
-struct Bwd{X <: Category, Y <: Category} <: Functor{X, Y}
-    left  :: X
-    right :: Y
+struct Bwd <: Functor
+    left  :: Category
+    right :: Category
 end
 
 struct Punct <: Category
@@ -46,7 +63,13 @@ PP() = PP("")
 
 |(x::Category, y::Category) = Bwd(x, y)
 
-function atomic_show(io::IO, cat, feature)
+isatom(::S) = true
+isatom(::N) = true
+isatom(::NP) = true
+isatom(::PP) = true
+isatom(::Category) = false
+
+function _show(io::IO, cat, feature)
     if isempty(feature)
         print(io, "$cat")
     else
@@ -54,10 +77,10 @@ function atomic_show(io::IO, cat, feature)
     end
 end
 
-Base.show(io::IO, x::S) = atomic_show(io, "S", x.feature)
-Base.show(io::IO, x::N) = atomic_show(io, "N", x.feature)
-Base.show(io::IO, x::NP) = atomic_show(io, "NP", x.feature)
-Base.show(io::IO, x::PP) = atomic_show(io, "PP", x.feature)
+Base.show(io::IO, x::S) = _show(io, "S", x.feature)
+Base.show(io::IO, x::N) = _show(io, "N", x.feature)
+Base.show(io::IO, x::NP) = _show(io, "NP", x.feature)
+Base.show(io::IO, x::PP) = _show(io, "PP", x.feature)
 Base.show(io::IO, x::Fwd) = print(io, "($(x.left)/$(x.right))")
 Base.show(io::IO, x::Bwd) = print(io, "($(x.left)\\$(x.right))")
 Base.show(io::IO, x::Punct) = print(io, x.value)
@@ -104,17 +127,10 @@ end
 
 parseline(line) = parsestep(preprocess(line), [])
 
-is_nice(c::Functor{Bwd{S, NP}, NP}) = true
-is_nice(c::Category) = false
-
-path = "/Users/masashi-y/depccg/models/tri_headfirst/target.txt"
-open(path) do f
-    for line in eachline(f)
-        line = split(line)[1]
-        cat = parseline(line)
-        if is_nice(cat)
-            println(cat,  " ==> ", is_nice(cat))
-        end
+function forward(x, y)
+    @match (x, y) begin
+        Fwd(s, t), t => s
     end
 end
 
+end

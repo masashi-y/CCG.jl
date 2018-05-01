@@ -1,10 +1,21 @@
 
+module CCGBank
+
+export Tree,
+       Node,
+       Leaf,
+       CCG,
+       parseline,
+       readfile
+
 using Match
+using Cat
+import Cat.Category
 
 abstract type Tree end
 
 struct Node <: Tree
-    cat :: String
+    cat :: Category
     head :: Int
     nodes :: Vector{Tree}
 end
@@ -12,7 +23,7 @@ end
 struct Leaf <: Tree
     word :: String
     tag :: String
-    cat :: String
+    cat :: Category
     dep :: String
 end
 
@@ -45,11 +56,11 @@ function parsestep(items, stack)
     @match items begin
         [] => return stack[1]
         ["(", "L", cat, pos, _, word, dep, _, rest...] => begin
-            push!(stack, Leaf(word, pos, cat, dep))
+            push!(stack, Leaf(word, pos, Cat.parseline(cat), dep))
             parsestep(rest, stack)
         end
         ["(", "T", cat, head, _, rest...] => begin
-            push!(stack, cs -> Node(cat, parse(head), cs))
+            push!(stack, cs -> Node(Cat.parseline(cat), parse(head), cs))
             parsestep(rest, stack)
         end
         [")", rest...] => begin
@@ -70,7 +81,7 @@ end
 
 parseline(line) = parsestep(preprocess(line), [])
 
-function parsefile(file)
+function readfile(file)
     res = []
     open(file) do f
         while !eof(f)
@@ -82,8 +93,4 @@ function parsefile(file)
     res
 end
 
-path = "/Users/masashi-y/ccgbank/ccgbank_1_1/data/AUTO/00/wsj_0001.auto"
-res = parsefile(path)
-for t in res
-    println(t)
 end
